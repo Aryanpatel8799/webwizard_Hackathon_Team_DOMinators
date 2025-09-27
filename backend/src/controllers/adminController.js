@@ -6,9 +6,7 @@ import { asyncHandler, AppError } from '../middleware/errorHandler.js';
 import mongoose from 'mongoose';
 import { emailService } from '../services/index.js';
 
-/**
- * Admin login
- */
+
 export const adminLogin = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
