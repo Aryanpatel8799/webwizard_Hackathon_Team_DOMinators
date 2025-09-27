@@ -3,15 +3,14 @@ import { Admin } from './src/models/index.js';
 
 async function testAdmin() {
   try {
-    console.log('🔍 Looking for admin users...');
-    
-    // Find all admins
+    console.log(' Looking for admin users...');
+ 
     const allAdmins = await Admin.find({});
-    console.log(`📋 Total admins in database: ${allAdmins.length}`);
+    console.log(` Total admins in database: ${allAdmins.length}`);
     
     if (allAdmins.length > 0) {
       allAdmins.forEach((admin, index) => {
-        console.log(`👤 Admin ${index + 1}:`, {
+        console.log(` Admin ${index + 1}:`, {
           id: admin._id,
           name: admin.name,
           email: admin.email,
@@ -22,8 +21,7 @@ async function testAdmin() {
       });
     }
     
-    // Test finding by email
-    console.log('\n🔑 Testing findActiveByEmail...');
+    console.log('\n Testing findActiveByEmail...');
     const admin = await Admin.findActiveByEmail('admin@eventapp.com');
     
     if (admin) {
@@ -35,17 +33,17 @@ async function testAdmin() {
       });
       
       // Test password comparison
-      console.log('\n🔐 Testing password comparison...');
+      console.log('\n Testing password comparison...');
       const isPasswordValid = await admin.comparePassword('Admin123!');
       console.log(`Password valid: ${isPasswordValid ? '✅' : '❌'}`);
       
     } else {
-      console.log('❌ Admin not found by email');
+      console.log(' Admin not found by email');
     }
     
     process.exit(0);
   } catch (error) {
-    console.error('❌ Test failed:', error);
+    console.error('Test failed:', error);
     process.exit(1);
   }
 }
