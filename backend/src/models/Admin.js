@@ -92,8 +92,9 @@ adminSchema.virtual('effectivePermissions').get(function() {
   if (this.role === 'superadmin') {
     return {
       events: { create: true, read: true, update: true, delete: true },
-      registrations: { read: true, update: true, delete: true },
-      admin: { read: true, create: true, update: true, delete: true }
+      registrations: { create: true, read: true, update: true, delete: true },
+      admin: { read: true, create: true, update: true, delete: true },
+      analytics: { read: true }
     };
   }
   
