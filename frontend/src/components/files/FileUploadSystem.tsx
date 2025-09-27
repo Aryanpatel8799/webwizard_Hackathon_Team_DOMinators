@@ -18,6 +18,25 @@ import {
 import { Button, Card, CardContent } from '../ui';
 import { toast } from 'sonner';
 
+// Helper function to convert MIME types to user-friendly names
+const getReadableFileTypes = (acceptedTypes: string[]): string => {
+  const typeMap: Record<string, string> = {
+    'image/*': 'Images',
+    'application/pdf': 'PDF',
+    'application/msword': 'Word Documents (.doc)',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'Word Documents (.docx)',
+    'text/csv': 'CSV',
+    'application/*': 'Documents',
+    'text/*': 'Text Files',
+    'video/*': 'Videos',
+    'audio/*': 'Audio Files'
+  };
+  
+  return acceptedTypes
+    .map(type => typeMap[type] || type)
+    .join(', ');
+};
+
 export interface FileUploadProps {
   acceptedTypes?: string[];
   maxFileSize?: number; // in bytes
@@ -43,7 +62,13 @@ export interface UploadedFile {
 }
 
 const FileUploadSystem: React.FC<FileUploadProps> = ({
-  acceptedTypes = ['image/*', 'application/pdf', '.doc', '.docx', '.csv'],
+  acceptedTypes = [
+    'image/*', 
+    'application/pdf', 
+    'application/msword', 
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'text/csv'
+  ],
   maxFileSize = 10 * 1024 * 1024, // 10MB default
   maxFiles = 5,
   onUpload,
@@ -205,7 +230,7 @@ const FileUploadSystem: React.FC<FileUploadProps> = ({
             </p>
 
             <div className="text-sm text-gray-500 space-y-1">
-              <p>Accepted formats: {acceptedTypes.join(', ')}</p>
+              <p>Accepted formats: {getReadableFileTypes(acceptedTypes)}</p>
               <p>Maximum file size: {Math.round(maxFileSize / (1024 * 1024))}MB</p>
               <p>Maximum files: {maxFiles}</p>
             </div>

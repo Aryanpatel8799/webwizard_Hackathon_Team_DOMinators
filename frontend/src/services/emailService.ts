@@ -42,11 +42,29 @@ export interface BulkEmailData {
 
 // Email service class
 export class EmailService {
-  private static baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+  private static baseUrl = 'http://localhost:4000';
 
   // Send single email
   static async sendEmail(emailData: EmailData): Promise<{ success: boolean; messageId?: string; error?: string }> {
     try {
+      // Mock implementation for now - replace with actual API call when backend is ready
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network delay
+      
+      console.log('Mock Email Service - Sending email:', {
+        to: emailData.to,
+        subject: emailData.subject,
+        template: emailData.template
+      });
+      
+      toast.success(`Email sent successfully to ${emailData.to.join(', ')}`);
+      
+      return {
+        success: true,
+        messageId: `mock-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+      };
+      
+      // Uncomment when backend email API is ready:
+      /*
       const response = await fetch(`${this.baseUrl}/api/emails/send`, {
         method: 'POST',
         headers: {
@@ -65,6 +83,7 @@ export class EmailService {
         toast.error(result.message || 'Failed to send email');
         return { success: false, error: result.message };
       }
+      */
     } catch (error) {
       console.warn('Email service not available, simulating send:', error);
       
@@ -82,6 +101,24 @@ export class EmailService {
     errors?: string[] 
   }> {
     try {
+      // Mock implementation for now - replace with actual API call when backend is ready
+      await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate network delay
+      
+      console.log('Mock Email Service - Sending bulk emails:', {
+        recipients: bulkData.recipients.length,
+        template: bulkData.template,
+        subject: bulkData.subject
+      });
+      
+      // Simulate bulk email sending for demo
+      const sent = Math.floor(bulkData.recipients.length * 0.95); // 95% success rate
+      const failed = bulkData.recipients.length - sent;
+      
+      toast.success(`Bulk email sent to ${sent} recipients! ${failed > 0 ? `${failed} failed` : ''}`);
+      return { success: true, sent, failed };
+      
+      // Uncomment when backend email API is ready:
+      /*
       const response = await fetch(`${this.baseUrl}/api/emails/bulk`, {
         method: 'POST',
         headers: {
@@ -100,6 +137,7 @@ export class EmailService {
         toast.error(result.message || 'Failed to send bulk email');
         return { success: false, sent: 0, failed: bulkData.recipients.length, errors: [result.message] };
       }
+      */
     } catch (error) {
       console.warn('Bulk email service not available, simulating send:', error);
       

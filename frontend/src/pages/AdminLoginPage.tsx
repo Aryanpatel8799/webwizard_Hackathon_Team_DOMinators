@@ -34,7 +34,7 @@ export const AdminLoginPage: React.FC = () => {
     resolver: zodResolver(loginSchema),
     defaultValues: {
       email: 'admin@eventapp.com',
-      password: 'Admin123!'
+      password: 'admin123'
     }
   });
 
@@ -60,9 +60,9 @@ export const AdminLoginPage: React.FC = () => {
 
   const fillDemoCredentials = (role: 'admin' | 'manager' | 'support') => {
     const credentials = {
-      admin: { email: 'admin@eventapp.com', password: 'Admin123!' },
-      manager: { email: 'manager@eventapp.com', password: 'Manager123!' },
-      support: { email: 'support@eventapp.com', password: 'Support123!' }
+      admin: { email: 'admin@eventapp.com', password: 'admin123' },
+      manager: { email: 'manager@eventapp.com', password: 'manager123' },
+      support: { email: 'support@eventapp.com', password: 'support123' }
     };
     
     setValue('email', credentials[role].email);

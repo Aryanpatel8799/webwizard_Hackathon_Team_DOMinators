@@ -36,9 +36,10 @@ router.get('/', (req, res) => {
 });
 
 // Mount route modules
+// Mount admin routes first to avoid conflicts with parameterized routes
+router.use('/admin', adminRouter);
+router.use('/auth', authRouter);
 router.use('/events', eventsRouter);
 router.use('/', registrationsRouter); // Registration routes are nested under events
-router.use('/auth', authRouter);
-router.use('/admin', adminRouter);
 
 export default router;

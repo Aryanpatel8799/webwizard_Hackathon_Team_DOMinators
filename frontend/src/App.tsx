@@ -1,13 +1,12 @@
-import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { Toaster } from 'sonner';
 import { AuthProvider } from './contexts/AuthContext';
-import { ThemeProvider } from './hooks/useTheme';
+import { NotificationProvider } from './contexts/NotificationContext';
+import { RealTimeProvider } from './contexts/RealTimeContext';
+// import { ThemeProvider } from './hooks/useTheme';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
-import Navbar from './components/Navbar';
-import Footer from './components/Footer';
 
 // Pages
 import { HomePage, AdminLoginPage, AdminDashboardPage, NotFoundPage } from './pages';
@@ -25,18 +24,17 @@ const queryClient = new QueryClient({
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <AuthProvider>
-          <Router
+      <AuthProvider>
+        <NotificationProvider>
+          <RealTimeProvider>
+            <Router
             future={{
               v7_startTransition: true,
               v7_relativeSplatPath: true
             }}
           >
-            <div className="min-h-screen bg-gray-900 flex flex-col">
-              <Navbar />
-              
-              <main className="flex-1">
+            <div className="min-h-screen bg-gray-900">
+              <main>
                 <Routes>
                   {/* Public routes */}
                   <Route path="/" element={<HomePage />} />
@@ -61,8 +59,6 @@ function App() {
                 </Routes>
               </main>
               
-              <Footer />
-              
               {/* Toast notifications */}
               <Toaster 
                 theme="dark"
@@ -70,9 +66,10 @@ function App() {
                 richColors
               />
             </div>
-          </Router>
-        </AuthProvider>
-      </ThemeProvider>
+            </Router>
+          </RealTimeProvider>
+        </NotificationProvider>
+      </AuthProvider>
       
       {/* React Query Devtools */}
       <ReactQueryDevtools initialIsOpen={false} />

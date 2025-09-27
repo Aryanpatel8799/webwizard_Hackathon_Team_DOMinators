@@ -34,7 +34,7 @@ import {
 import { Button, Card, CardContent, CardHeader } from '../ui';
 import { CSVExportService } from '../../services/csvService';
 import { useQuery } from '@tanstack/react-query';
-import { api } from '../../api/index';
+import { adminApi } from '../../api/admin';
 
 interface AnalyticsDashboardProps {
   dateRange?: 'week' | 'month' | 'quarter' | 'year';
@@ -94,61 +94,107 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
   // Fetch analytics data
   const { data: analytics, isLoading, refetch } = useQuery({
     queryKey: ['analytics', dateRange],
-    queryFn: () => api.admin.getAnalytics()
+    queryFn: () => adminApi.admin.getAnalytics({ period: dateRange === 'week' ? '7d' : dateRange === 'month' ? '30d' : dateRange === 'quarter' ? '90d' : '30d' })
   });
 
   const { data: events = [] } = useQuery({
     queryKey: ['admin-events'],
-    queryFn: api.admin.getAllEvents
+    queryFn: adminApi.admin.getAllEvents
   });
 
   const { data: registrations = [] } = useQuery({
     queryKey: ['admin-registrations'],
-    queryFn: api.admin.getAllRegistrations
+    queryFn: adminApi.admin.getAllRegistrations
   });
 
-  // Generate chart data
+  // Generate chart data from real analytics data
   const chartData = useMemo(() => {
+    if (!analytics) return [];
+    
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const currentDate = new Date();
     const currentMonth = currentDate.getMonth();
     
+    // Create a map of dates to aggregate data
+    const dateMap = new Map();
+    
+    // Process events by date
+    if (analytics.eventsByDate) {
+      analytics.eventsByDate.forEach((item: any) => {
+        const date = new Date(item._id);
+        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        if (!dateMap.has(monthKey)) {
+          dateMap.set(monthKey, { events: 0, registrations: 0, revenue: 0 });
+        }
+        dateMap.get(monthKey).events += item.count;
+      });
+    }
+    
+    // Process registrations by date
+    if (analytics.registrationsByDate) {
+      analytics.registrationsByDate.forEach((item: any) => {
+        const date = new Date(item._id);
+        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        if (!dateMap.has(monthKey)) {
+          dateMap.set(monthKey, { events: 0, registrations: 0, revenue: 0 });
+        }
+        dateMap.get(monthKey).registrations += item.count;
+      });
+    }
+    
     // Generate last 6 months of data
     const data = [];
     for (let i = 5; i >= 0; i--) {
-      const monthIndex = (currentMonth - i + 12) % 12;
-      const eventCount = Math.floor(Math.random() * 20) + 5;
-      const regCount = Math.floor(Math.random() * 300) + 100;
+      const date = new Date(currentDate.getFullYear(), currentMonth - i, 1);
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      const monthData = dateMap.get(monthKey) || { events: 0, registrations: 0, revenue: 0 };
       
       data.push({
-        month: months[monthIndex],
-        events: eventCount,
-        registrations: regCount,
-        revenue: regCount * (Math.floor(Math.random() * 50) + 25),
-        activeUsers: Math.floor(regCount * 0.8)
+        month: months[date.getMonth()],
+        events: monthData.events,
+        registrations: monthData.registrations,
+        revenue: monthData.revenue || (monthData.registrations * (analytics.avgTicketPrice || 0)),
+        activeUsers: Math.floor(monthData.registrations * 0.8)
       });
     }
     return data;
-  }, [dateRange]);
+  }, [analytics, dateRange]);
 
-  // Event category distribution
+  // Event category distribution from real data
   const categoryData = useMemo(() => {
-    const categories = ['Conference', 'Workshop', 'Seminar', 'Networking', 'Training'];
-    const colors = ['#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
+    const colors = ['#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#8b5cf6', '#06b6d4'];
     
-    return categories.map((category, index) => ({
-      name: category,
-      value: Math.floor(Math.random() * 30) + 10,
-      color: colors[index]
+    if (!analytics?.eventsByCategory) {
+      return [];
+    }
+    
+    return analytics.eventsByCategory.map((category: any, index: number) => ({
+      name: category._id || 'Other',
+      value: category.count || 0,
+      color: colors[index % colors.length]
     }));
-  }, []);
+  }, [analytics]);
 
-  // Registration status data
-  const statusData = useMemo(() => [
-    { name: 'Confirmed', value: 78, color: '#10b981' },
-    { name: 'Pending', value: 15, color: '#f59e0b' },
-    { name: 'Cancelled', value: 7, color: '#ef4444' }
-  ], []);
+  // Registration status data from real analytics
+  const statusData = useMemo(() => {
+    if (!analytics?.registrationsByStatus) {
+      return [
+        { name: 'Confirmed', value: 0, color: '#10b981' },
+        { name: 'Pending', value: 0, color: '#f59e0b' },
+        { name: 'Cancelled', value: 0, color: '#ef4444' }
+      ];
+    }
+    
+    const total = analytics.registrationsByStatus.reduce((sum: number, status: any) => sum + status.count, 0);
+    
+    return analytics.registrationsByStatus.map((status: any) => ({
+      name: status._id.charAt(0).toUpperCase() + status._id.slice(1),
+      value: total > 0 ? Math.round((status.count / total) * 100) : 0,
+      color: status._id === 'confirmed' ? '#10b981' : 
+             status._id === 'waiting' ? '#f59e0b' : 
+             status._id === 'cancelled' ? '#ef4444' : '#6b7280'
+    }));
+  }, [analytics]);
 
   const handleExportAnalytics = () => {
     CSVExportService.exportAnalytics(analytics || {
@@ -313,37 +359,41 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
         <MetricCard
           title="Total Events"
           value={analytics?.totalEvents || events.length}
-          change={analytics?.eventsGrowth || 12}
+          change={analytics?.eventsGrowth || 0}
           icon={Calendar}
           color="bg-gradient-to-br from-blue-500 to-blue-600"
-          subtitle={`${events.filter((e: any) => e.isActive).length} active`}
+          subtitle={`${analytics?.activeEvents || events.filter((e: any) => e.isActive).length} active`}
         />
         
         <MetricCard
           title="Total Registrations"
           value={(analytics?.totalRegistrations || registrations.length).toLocaleString()}
-          change={analytics?.registrationsGrowth || 25}
+          change={analytics?.registrationsGrowth || 0}
           icon={Users}
           color="bg-gradient-to-br from-green-500 to-green-600"
-          subtitle={`${Math.round(((analytics?.totalRegistrations || registrations.length) / (analytics?.totalEvents || events.length || 1)) || 0)} avg per event`}
+          subtitle={`${analytics?.totalEvents > 0 ? Math.round((analytics?.totalRegistrations || 0) / analytics?.totalEvents) : 0} avg per event`}
         />
         
         <MetricCard
           title="Revenue"
           value={`$${(analytics?.totalRevenue || 0).toLocaleString()}`}
-          change={analytics?.revenueGrowth || 18}
+          change={analytics?.revenueGrowth || 0}
           icon={DollarSign}
           color="bg-gradient-to-br from-purple-500 to-purple-600"
-          subtitle={`$${Math.round((analytics?.totalRevenue || 0) / (analytics?.totalEvents || events.length || 1))} per event`}
+          subtitle={`$${analytics?.avgTicketPrice ? Math.round(analytics.avgTicketPrice) : 0} avg ticket price`}
         />
         
         <MetricCard
           title="Conversion Rate"
-          value="78.5%"
-          change={5.2}
+          value={(() => {
+            if (!analytics?.registrationsByStatus || analytics.totalRegistrations === 0) return '0%';
+            const confirmed = analytics.registrationsByStatus.find((s: any) => s._id === 'confirmed')?.count || 0;
+            return `${Math.round((confirmed / analytics.totalRegistrations) * 100)}%`;
+          })()}
+          change={analytics?.conversionGrowth || 0}
           icon={Target}
           color="bg-gradient-to-br from-cyan-500 to-cyan-600"
-          subtitle="Registration to attendance"
+          subtitle="Confirmed registrations rate"
         />
       </div>
 
@@ -497,31 +547,60 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
             <div className="space-y-6">
               <div>
                 <div className="flex justify-between items-center mb-2">
-                  <span className="text-gray-300">Average Event Capacity</span>
-                  <span className="text-white font-medium">85%</span>
+                  <span className="text-gray-300">Event Utilization</span>
+                  <span className="text-white font-medium">
+                    {analytics?.totalEvents > 0 ? Math.round((analytics?.activeEvents || 0) / analytics?.totalEvents * 100) : 0}%
+                  </span>
                 </div>
                 <div className="w-full h-2 bg-gray-700 rounded-full overflow-hidden">
-                  <div className="h-full bg-blue-500 transition-all duration-500" style={{ width: '85%' }} />
+                  <div 
+                    className="h-full bg-blue-500 transition-all duration-500" 
+                    style={{ 
+                      width: `${analytics?.totalEvents > 0 ? Math.round((analytics?.activeEvents || 0) / analytics?.totalEvents * 100) : 0}%` 
+                    }} 
+                  />
                 </div>
               </div>
               
               <div>
                 <div className="flex justify-between items-center mb-2">
-                  <span className="text-gray-300">Customer Satisfaction</span>
-                  <span className="text-white font-medium">4.7/5</span>
+                  <span className="text-gray-300">Registration Success Rate</span>
+                  <span className="text-white font-medium">
+                    {(() => {
+                      if (!analytics?.registrationsByStatus || analytics.totalRegistrations === 0) return '0%';
+                      const confirmed = analytics.registrationsByStatus.find((s: any) => s._id === 'confirmed')?.count || 0;
+                      return `${Math.round((confirmed / analytics.totalRegistrations) * 100)}%`;
+                    })()}
+                  </span>
                 </div>
                 <div className="w-full h-2 bg-gray-700 rounded-full overflow-hidden">
-                  <div className="h-full bg-green-500 transition-all duration-500" style={{ width: '94%' }} />
+                  <div 
+                    className="h-full bg-green-500 transition-all duration-500" 
+                    style={{ 
+                      width: `${(() => {
+                        if (!analytics?.registrationsByStatus || analytics.totalRegistrations === 0) return 0;
+                        const confirmed = analytics.registrationsByStatus.find((s: any) => s._id === 'confirmed')?.count || 0;
+                        return Math.round((confirmed / analytics.totalRegistrations) * 100);
+                      })()}%` 
+                    }} 
+                  />
                 </div>
               </div>
               
               <div>
                 <div className="flex justify-between items-center mb-2">
-                  <span className="text-gray-300">Repeat Attendees</span>
-                  <span className="text-white font-medium">62%</span>
+                  <span className="text-gray-300">Average Revenue per Event</span>
+                  <span className="text-white font-medium">
+                    ${analytics?.totalEvents > 0 ? Math.round((analytics?.totalRevenue || 0) / analytics?.totalEvents) : 0}
+                  </span>
                 </div>
                 <div className="w-full h-2 bg-gray-700 rounded-full overflow-hidden">
-                  <div className="h-full bg-purple-500 transition-all duration-500" style={{ width: '62%' }} />
+                  <div 
+                    className="h-full bg-purple-500 transition-all duration-500" 
+                    style={{ 
+                      width: `${Math.min(100, analytics?.totalEvents > 0 ? Math.round((analytics?.totalRevenue || 0) / analytics?.totalEvents / 10) : 0)}%` 
+                    }} 
+                  />
                 </div>
               </div>
             </div>
