@@ -458,6 +458,3 @@ For support and questions:
 - Docker containerization
 - Production deployment guides
 
----
-
-**Made with ❤️ for seamless event management**
